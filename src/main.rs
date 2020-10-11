@@ -237,8 +237,11 @@ async fn handle_hosts(
         for host in hosts.iter() {
             let mut names = Vec::new();
             if let Some(n) = host.name.as_deref() {
-                names.push(format!("{}{}", n.to_string(),
-                    app.config.int_suffix));
+                names.push(n.to_string());
+                if !app.config.int_suffix.is_empty() {
+                    names.push(format!("{}{}", n.to_string(),
+                        app.config.int_suffix));
+                }
             }
             names.push(host.id.to_string());
 
