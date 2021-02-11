@@ -21,7 +21,6 @@ use rusoto_core::{
     HttpClient,
 };
 use rusoto_credential::{
-    DefaultCredentialsProvider,
     StaticProvider,
 };
 use rusoto_ec2 as ec2;
@@ -35,7 +34,6 @@ use ec2::{
 use tokio::try_join;
 use slog::{Logger, crit, error, info};
 use hyper::{Body, Response};
-use hyper::body::HttpBody;
 use hyper::http::header;
 use serde::Deserialize;
 
@@ -158,13 +156,13 @@ async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
                 Ok(hosts) => hosts,
                 Err(e) => {
                     error!(log, "extract_hosts: {:?}", e);
-                    tokio::time::delay_for(delay).await;
+                    tokio::time::sleep(delay).await;
                     continue;
                 }
             }
             Err(e) => {
                 error!(log, "describe instances failure: {:?}", e);
-                tokio::time::delay_for(delay).await;
+                tokio::time::sleep(delay).await;
                 continue;
             }
         };
@@ -177,7 +175,7 @@ async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
             cache.cv.notify_all();
         }
 
-        tokio::time::delay_for(delay).await;
+        tokio::time::sleep(delay).await;
     }
 }
 
@@ -188,7 +186,6 @@ async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
 async fn handle_hosts(
     rqctx: Arc<RequestContext>,
 ) -> std::result::Result<Response<Body>, HttpError> {
-    let log = &rqctx.log;
     let app = App::from_request(&rqctx);
 
     let auth = {
@@ -317,6 +314,7 @@ async fn main() -> Result<()> {
 
     let cfgds = ConfigDropshot {
         bind_address: bind.parse()?,
+        ..Default::default()
     };
 
     let log0 = log.clone();
