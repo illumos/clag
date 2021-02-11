@@ -4,7 +4,6 @@ use anyhow::{Result, bail, anyhow};
 use std::time::Duration;
 use std::process::exit;
 use std::sync::{Mutex, Condvar, Arc};
-use std::any::Any;
 use std::io::Read;
 use dropshot::{
     ConfigLogging,
@@ -12,7 +11,7 @@ use dropshot::{
     ConfigDropshot,
     RequestContext,
     ApiDescription,
-    HttpServer,
+    HttpServerStarter,
     HttpError,
     endpoint,
 };
@@ -55,17 +54,6 @@ struct App {
     cache: Arc<Cache>,
     config: Config,
 }
-
-impl App {
-    fn from_private(ctx: Arc<dyn Any + Send + Sync + 'static>) -> Arc<App> {
-        ctx.downcast::<App>().expect("app downcast")
-    }
-
-    fn from_request(rqctx: &Arc<RequestContext>) -> Arc<App> {
-        Self::from_private(Arc::clone(&rqctx.server.private))
-    }
-}
-
 
 #[derive(Debug, Clone)]
 struct Host {
@@ -184,9 +172,9 @@ async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
     path = "/hosts",
 }]
 async fn handle_hosts(
-    rqctx: Arc<RequestContext>,
+    rqctx: Arc<RequestContext<App>>,
 ) -> std::result::Result<Response<Body>, HttpError> {
-    let app = App::from_request(&rqctx);
+    let app = rqctx.context();
 
     let auth = {
         let req = rqctx.request.lock().await;
@@ -304,10 +292,10 @@ async fn main() -> Result<()> {
     /*
      * Start API server.
      */
-    let app = Arc::new(App {
+    let app = App {
         cache,
         config,
-    });
+    };
 
     let mut api = ApiDescription::new();
     api.register(handle_hosts).unwrap();
@@ -319,10 +307,9 @@ async fn main() -> Result<()> {
 
     let log0 = log.clone();
     let t_server = tokio::task::spawn(async move {
-        let mut server = HttpServer::new(&cfgds, api, app, &log0)?;
-        let task = server.run();
-        server.wait_for_shutdown(task).await
+        HttpServerStarter::new(&cfgds, api, app, &log0)
             .map_err(|e| anyhow!("server task failure: {:?}", e))
+            .map(|s| s.start())
     });
 
     /*

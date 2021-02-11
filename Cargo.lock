@@ -231,9 +231,8 @@ checksum = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 
 [[package]]
 name = "dropshot"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b7bc27744929970b71a8fd130d4b728af550adbd5f7f2bf0615e6597f8a6fd1"
+version = "0.4.1-dev"
+source = "git+https://github.com/oxidecomputer/dropshot?rev=5f1a207eb5fec5268f2fdbbf0f7aab9b9d682a99#5f1a207eb5fec5268f2fdbbf0f7aab9b9d682a99"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
@@ -263,9 +262,8 @@ dependencies = [
 
 [[package]]
 name = "dropshot_endpoint"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a203506e85b64ed6984bdd773ee5e7018befe73db15cc44b3ff297c34e3f1d1"
+version = "0.4.1-dev"
+source = "git+https://github.com/oxidecomputer/dropshot?rev=5f1a207eb5fec5268f2fdbbf0f7aab9b9d682a99#5f1a207eb5fec5268f2fdbbf0f7aab9b9d682a99"
 dependencies = [
  "proc-macro2",
  "quote",
