@@ -1,40 +1,24 @@
-
-use getopts::Options;
-use anyhow::{Result, bail, anyhow};
-use std::time::Duration;
-use std::process::exit;
-use std::sync::{Mutex, Condvar, Arc};
-use std::io::Read;
+use anyhow::{anyhow, bail, Result};
 use dropshot::{
-    ConfigLogging,
-    ConfigLoggingLevel,
-    ConfigDropshot,
-    RequestContext,
-    ApiDescription,
-    HttpServerStarter,
-    HttpError,
-    endpoint,
+    endpoint, ApiDescription, ConfigDropshot, ConfigLogging,
+    ConfigLoggingLevel, HttpError, HttpServerStarter, RequestContext,
 };
-use rusoto_core::{
-    Region,
-    HttpClient,
-};
-use rusoto_credential::{
-    StaticProvider,
-};
-use rusoto_ec2 as ec2;
 use ec2::{
-    Ec2,
-    Ec2Client,
-    DescribeInstancesRequest,
-    DescribeInstancesResult,
-    Tag,
+    DescribeInstancesRequest, DescribeInstancesResult, Ec2, Ec2Client, Tag,
 };
-use tokio::try_join;
-use slog::{Logger, crit, error, info};
-use hyper::{Body, Response};
+use getopts::Options;
 use hyper::http::header;
+use hyper::{Body, Response};
+use rusoto_core::{HttpClient, Region};
+use rusoto_credential::StaticProvider;
+use rusoto_ec2 as ec2;
 use serde::Deserialize;
+use slog::{crit, error, info, Logger};
+use std::io::Read;
+use std::process::exit;
+use std::sync::{Arc, Condvar, Mutex};
+use std::time::Duration;
+use tokio::try_join;
 
 #[derive(Deserialize, Clone)]
 struct ConfigAWS {
@@ -112,11 +96,7 @@ fn extract_hosts(res: &DescribeInstancesResult) -> Result<Vec<Host>> {
                 };
                 let name = i.tags.tag("Name");
 
-                hosts.push(Host {
-                    id,
-                    name,
-                    ipv4,
-                });
+                hosts.push(Host { id, name, ipv4 });
             }
         }
     }
@@ -127,17 +107,20 @@ fn extract_hosts(res: &DescribeInstancesResult) -> Result<Vec<Host>> {
 async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
     let credprov = StaticProvider::new_minimal(
         cache.config.aws.access_key_id.clone(),
-        cache.config.aws.secret_access_key.clone());
-    let ec2 = Ec2Client::new_with(HttpClient::new()?, credprov,
-        Region::UsWest2);
+        cache.config.aws.secret_access_key.clone(),
+    );
+    let ec2 =
+        Ec2Client::new_with(HttpClient::new()?, credprov, Region::UsWest2);
 
     let delay = Duration::from_secs(cache.config.refresh_interval);
 
     info!(log, "start cache update task");
     loop {
-        let res = ec2.describe_instances(DescribeInstancesRequest {
-            ..Default::default()
-        }).await;
+        let res = ec2
+            .describe_instances(DescribeInstancesRequest {
+                ..Default::default()
+            })
+            .await;
 
         let hosts = match res {
             Ok(res) => match extract_hosts(&res) {
@@ -147,7 +130,7 @@ async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
                     tokio::time::sleep(delay).await;
                     continue;
                 }
-            }
+            },
             Err(e) => {
                 error!(log, "describe instances failure: {:?}", e);
                 tokio::time::sleep(delay).await;
@@ -157,9 +140,7 @@ async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
 
         {
             let mut inner = cache.inner.lock().unwrap();
-            *inner = Some(CacheInner {
-                hosts,
-            });
+            *inner = Some(CacheInner { hosts });
             cache.cv.notify_all();
         }
 
@@ -196,9 +177,11 @@ async fn handle_hosts(
     };
 
     if !ok {
-        return Err(HttpError::for_client_error(None,
+        return Err(HttpError::for_client_error(
+            None,
             hyper::StatusCode::UNAUTHORIZED,
-            "invalid".into()));
+            "invalid".into(),
+        ));
     }
 
     /*
@@ -224,8 +207,11 @@ async fn handle_hosts(
             if let Some(n) = host.name.as_deref() {
                 names.push(n.to_string());
                 if !app.config.int_suffix.is_empty() {
-                    names.push(format!("{}{}", n.to_string(),
-                        app.config.int_suffix));
+                    names.push(format!(
+                        "{}{}",
+                        n.to_string(),
+                        app.config.int_suffix
+                    ));
                 }
             }
             names.push(host.id.to_string());
@@ -266,9 +252,8 @@ async fn main() -> Result<()> {
     };
     let bind = p.opt_str("b").unwrap_or(String::from("0.0.0.0:9977"));
 
-    let cfglog = ConfigLogging::StderrTerminal {
-        level: ConfigLoggingLevel::Info,
-    };
+    let cfglog =
+        ConfigLogging::StderrTerminal { level: ConfigLoggingLevel::Info };
     let log = cfglog.to_logger("clag")?;
 
     let config = read_config(&p.opt_str("f").unwrap())?;
@@ -285,25 +270,21 @@ async fn main() -> Result<()> {
     let cache0 = Arc::clone(&cache);
     let log0 = log.clone();
     let t_update = tokio::task::spawn(async move {
-        cache_update(log0, cache0).await
+        cache_update(log0, cache0)
+            .await
             .map_err(|e| anyhow!("cache update task failure: {:?}", e))
     });
 
     /*
      * Start API server.
      */
-    let app = App {
-        cache,
-        config,
-    };
+    let app = App { cache, config };
 
     let mut api = ApiDescription::new();
     api.register(handle_hosts).unwrap();
 
-    let cfgds = ConfigDropshot {
-        bind_address: bind.parse()?,
-        ..Default::default()
-    };
+    let cfgds =
+        ConfigDropshot { bind_address: bind.parse()?, ..Default::default() };
 
     let log0 = log.clone();
     let t_server = tokio::task::spawn(async move {
