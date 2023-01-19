@@ -1,24 +1,21 @@
 [package]
 name = "clag"
 version = "0.1.0"
-authors = ["Joshua M. Clulow <josh@sysmgr.org>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = "2021"
 
 [dependencies]
 serde = { version = "1.0", features = [ "derive" ] }
 getopts = "0.2"
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "5f1a207eb5fec5268f2fdbbf0f7aab9b9d682a99" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "538e99b7997f17addbddb6fa417281bd9ee28a94" }
 anyhow = "1"
 tokio = { version = "1", features = ["full"] }
 slog = "2.5"
 schemars = { version = "0.8", features = [ "chrono", "uuid" ] }
 hyper = "0.14"
-rusoto_core = "0.46.0"
-rusoto_ec2 = "0.46.0"
-rusoto_s3 = "0.46.0"
-rusoto_credential = "0.46.0"
+rusoto_core = "0.48.0"
+rusoto_ec2 = "0.48.0"
+rusoto_s3 = "0.48.0"
+rusoto_credential = "0.48.0"
 toml = "0.5"
 
 #
