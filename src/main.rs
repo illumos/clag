@@ -153,12 +153,12 @@ async fn cache_update(log: Logger, cache: Arc<Cache>) -> Result<()> {
     path = "/hosts",
 }]
 async fn handle_hosts(
-    rqctx: Arc<RequestContext<App>>,
+    rqctx: RequestContext<App>,
 ) -> std::result::Result<Response<Body>, HttpError> {
     let app = rqctx.context();
 
     let auth = {
-        let req = rqctx.request.lock().await;
+        let req = &rqctx.request;
         if let Some(h) = req.headers().get(header::AUTHORIZATION) {
             if let Ok(v) = h.to_str() {
                 Some(v.to_string())

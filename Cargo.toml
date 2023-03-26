@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0", features = [ "derive" ] }
 getopts = "0.2"
-dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "538e99b7997f17addbddb6fa417281bd9ee28a94" }
+dropshot = { git = "https://github.com/oxidecomputer/dropshot", rev = "ccce2241b9a798819a3385f01b0b92f529c5fe8f" }
 anyhow = "1"
 tokio = { version = "1", features = ["full"] }
 slog = "2.5"
